@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { Box, Container, Typography, CircularProgress, Alert } from "@mui/material"
-import AddProduct from "./add-product"
-import ProductsTable from "./products-table"
-import type { Product } from "../types"
+import CreateInvoice from "./create-invoice"
+import InvoiceList from "./invoice-list"
+import type { Invoice } from "../types"
 
-export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([])
+export default function InvoicesPage() {
+  const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [page, setPage] = useState(1)
@@ -15,7 +15,7 @@ export default function ProductsPage() {
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState("")
 
-  const fetchProducts = useCallback(async () => {
+  const fetchInvoices = useCallback(async () => {
     try {
       setLoading(true)
       const queryParams = new URLSearchParams({
@@ -24,48 +24,47 @@ export default function ProductsPage() {
         ...(search && { search }),
       })
 
-      const res = await fetch(`/api/products?${queryParams}`)
-      if (!res.ok) throw new Error("Failed to fetch products")
-      console.log("<<<res", res)
+      const res = await fetch(`/api/invoices?${queryParams}`)
+      if (!res.ok) throw new Error("Failed to fetch invoices")
+
       const data = await res.json()
       console.log("<<<data", data)
-      setProducts(data.products)
+      setInvoices(data.invoices)
       setTotal(data.pagination.total)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load products")
+      setError(err instanceof Error ? err.message : "Failed to load invoices")
     } finally {
       setLoading(false)
     }
   }, [page, limit, search])
 
   useEffect(() => {
-    fetchProducts()
-  }, [fetchProducts])
+    fetchInvoices()
+  }, [fetchInvoices])
 
-  if (loading && !products.length) {
+  if (loading && !invoices.length) {
     return (
       <Container sx={{ display: "flex", justifyContent: "center", py: 4 }}>
         <CircularProgress />
       </Container>
     )
   }
-  console.log("<<<products eeee",products)
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
         <Typography variant="h4" component="h1">
-          Products
+          Invoices
         </Typography>
-        <AddProduct onProductAdded={fetchProducts} />
+        <CreateInvoice onInvoiceCreated={fetchInvoices} />
       </Box>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
-      <ProductsTable
-        products={products}
+      <InvoiceList
+        invoices={invoices}
         loading={loading}
         page={page}
         limit={limit}
@@ -74,7 +73,7 @@ export default function ProductsPage() {
         onSearchChange={setSearch}
         onPageChange={setPage}
         onLimitChange={setLimit}
-        onProductsChange={fetchProducts}
+        onInvoicesChange={fetchInvoices}
       />
     </Container>
   )

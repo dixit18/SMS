@@ -1,63 +1,50 @@
 import { NextResponse } from "next/server"
-import clientPromise from "../../lib/mongodb"
-import { ObjectId } from "mongodb"
 import { getSession } from "../../lib/auth"
+import Product from "../../lib/models/products"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getSession()
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const client = await clientPromise
-    const collection = client.db("stockmanagement").collection("products")
+    const { searchParams } = new URL(request.url)
+    const page = Number.parseInt(searchParams.get("page") || "1")
+    const limit = Number.parseInt(searchParams.get("limit") || "10")
+    const search = searchParams.get("search") || ""
 
-    const products = await collection.find({ organizationId: new ObjectId(session.organizationId) }).toArray()
+    const skip = (page - 1) * limit
 
-    return NextResponse.json(
-      products.map((product) => ({
-        ...product,
-        _id: product._id.toString(),
-        organizationId: product.organizationId.toString(),
-      })),
-    )
+    const query = {
+      organizationId: session.organizationId,
+      ...(search
+        ? {
+            $or: [
+              { name: { $regex: search, $options: "i" } },
+              { rollNo: { $regex: search, $options: "i" } },
+              { category: { $regex: search, $options: "i" } },
+            ],
+          }
+        : {}),
+    }
+
+    const [products, total] = await Promise.all([
+      Product.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Product.countDocuments(query),
+    ])
+
+    return NextResponse.json({
+      products,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    })
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 })
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const session = await getSession()
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const data = await request.json()
-    const client = await clientPromise
-    const collection = client.db("stockmanagement").collection("products")
-
-    const now = new Date()
-    const product = {
-      ...data,
-      organizationId: new ObjectId(session.organizationId),
-      createdAt: now,
-      updatedAt: now,
-    }
-
-    const result = await collection.insertOne(product)
-
-    return NextResponse.json(
-      {
-        ...product,
-        _id: result.insertedId.toString(),
-        organizationId: product.organizationId.toString(),
-      },
-      { status: 201 },
-    )
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to create product" }, { status: 500 })
   }
 }
 

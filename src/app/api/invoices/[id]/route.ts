@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
-import clientPromise from "../../../lib/mongodb"
+import Invoice from "../../../lib/models/invoice"
 import { getSession } from "../../../lib/auth"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
@@ -10,10 +10,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const client = await clientPromise
-    const collection = client.db("stockmanagement").collection("invoices")
-
-    const invoice = await collection.findOne({
+    const invoice = await Invoice.findOne({
       _id: new ObjectId(params.id),
       organizationId: new ObjectId(session.organizationId),
     })
@@ -28,6 +25,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       organizationId: invoice.organizationId.toString(),
     })
   } catch (error) {
+    console.log("<<<error", error)
     return NextResponse.json({ error: "Failed to fetch invoice" }, { status: 500 })
   }
 }
@@ -40,10 +38,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     const data = await request.json()
-    const client = await clientPromise
-    const collection = client.db("stockmanagement").collection("invoices")
 
-    const result = await collection.updateOne(
+    const result = await Invoice.updateOne(
       {
         _id: new ObjectId(params.id),
         organizationId: new ObjectId(session.organizationId),

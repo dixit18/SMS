@@ -12,68 +12,122 @@ import {
   IconButton,
   TextField,
   TablePagination,
+  Alert,
+  Tooltip,
+  LinearProgress,
 } from "@mui/material"
 import { Delete, Edit } from "@mui/icons-material"
-import { type Customer, deleteCustomer } from "./actions"
+import type { Customer } from "../types"
 import EditCustomer from "./edit-customer"
+import { debounce } from "lodash"
 
-export default function CustomersTable({ initialCustomers }: { initialCustomers: Customer[] }) {
-  const [customers, setCustomers] = useState(initialCustomers)
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
+interface CustomersTableProps {
+  customers: Customer[]
+  loading: boolean
+  page: number
+  limit: number
+  total: number
+  search: string
+  onSearchChange: (search: string) => void
+  onPageChange: (page: number) => void
+  onLimitChange: (limit: number) => void
+  onCustomersChange: () => void
+}
+
+export default function CustomersTable({
+  customers,
+  loading,
+  page,
+  limit,
+  total,
+  search,
+  onSearchChange,
+  onPageChange,
+  onLimitChange,
+  onCustomersChange,
+}: CustomersTableProps) {
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
+  const [error, setError] = useState("")
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this customer?")) {
-      await deleteCustomer(id)
-      setCustomers(customers.filter((c) => c._id !== id))
+    if (!confirm("Are you sure you want to delete this customer?")) return
+
+    try {
+      const res = await fetch(`/api/customers/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || "Failed to delete customer")
+      }
+
+      onCustomersChange()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete customer")
     }
   }
 
-  const filteredCustomers = customers.filter(
-    (customer) =>
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone.includes(searchTerm),
-  )
+  const debouncedSearch = debounce((value: string) => {
+    onSearchChange(value)
+  }, 300)
 
   return (
     <>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
       <TextField
         fullWidth
         variant="outlined"
         placeholder="Search customers..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+        defaultValue={search}
+        onChange={(e) => debouncedSearch(e.target.value)}
         sx={{ mb: 2 }}
       />
 
       <TableContainer component={Paper}>
+        {loading && <LinearProgress />}
         <Table>
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
+              <TableCell>Company</TableCell>
+              <TableCell>GST Number</TableCell>
               <TableCell>Email</TableCell>
               <TableCell>Phone</TableCell>
               <TableCell>Address</TableCell>
+              <TableCell>Created Date</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredCustomers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((customer) => (
+            {customers.map((customer) => (
               <TableRow key={customer._id}>
                 <TableCell>{customer.name}</TableCell>
+                <TableCell>{customer.companyName}</TableCell>
+                <TableCell>{customer.gstNumber}</TableCell>
                 <TableCell>{customer.email}</TableCell>
                 <TableCell>{customer.phone}</TableCell>
                 <TableCell>
-                  {`${customer.address.street}, ${customer.address.city}, ${customer.address.state} ${customer.address.zipCode}`}
+                  <Tooltip
+                    title={`${customer.address.street}, ${customer.address.city}, ${customer.address.state} ${customer.address.zipCode}, ${customer.address.country}`}
+                  >
+                    <span>{`${customer.address.city}, ${customer.address.state}`}</span>
+                  </Tooltip>
+                </TableCell>
+                <TableCell>
+                  <Tooltip title={new Date(customer.createdAt).toLocaleString()}>
+                    <span>{new Date(customer.createdAt).toLocaleDateString()}</span>
+                  </Tooltip>
                 </TableCell>
                 <TableCell>
                   <IconButton size="small" onClick={() => setEditCustomer(customer)}>
                     <Edit />
                   </IconButton>
-                  <IconButton size="small" onClick={() => handleDelete(customer._id as string)}>
+                  <IconButton size="small" onClick={() => handleDelete(customer._id)}>
                     <Delete />
                   </IconButton>
                 </TableCell>
@@ -82,15 +136,15 @@ export default function CustomersTable({ initialCustomers }: { initialCustomers:
           </TableBody>
         </Table>
         <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={filteredCustomers.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={(_, newPage) => setPage(newPage)}
+          count={total}
+          page={page - 1}
+          rowsPerPage={limit}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          onPageChange={(_, newPage) => onPageChange(newPage + 1)}
           onRowsPerPageChange={(e) => {
-            setRowsPerPage(Number.parseInt(e.target.value, 10))
-            setPage(0)
+            onLimitChange(Number.parseInt(e.target.value, 10))
+            onPageChange(1)
           }}
         />
       </TableContainer>
@@ -99,9 +153,9 @@ export default function CustomersTable({ initialCustomers }: { initialCustomers:
         <EditCustomer
           customer={editCustomer}
           onClose={() => setEditCustomer(null)}
-          onUpdate={(updatedCustomer) => {
-            setCustomers(customers.map((c) => (c._id === updatedCustomer._id ? updatedCustomer : c)))
+          onUpdate={() => {
             setEditCustomer(null)
+            onCustomersChange()
           }}
         />
       )}

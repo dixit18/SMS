@@ -1,17 +1,23 @@
 "use client"
 
 import { useState } from "react"
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid } from "@mui/material"
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid, Alert } from "@mui/material"
 import { Add } from "@mui/icons-material"
-import { addCustomer } from "./actions"
 
-export default function AddCustomer() {
+
+interface CustomersTableProps {
+  onCustomerAdded: () => void
+}
+
+export default function AddCustomer({ onCustomerAdded }: CustomersTableProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
+    setError("")
 
     const formData = new FormData(e.currentTarget)
     const data = {
@@ -25,11 +31,29 @@ export default function AddCustomer() {
         zipCode: formData.get("zipCode") as string,
         country: formData.get("country") as string,
       },
+      gstNumber: formData.get("gstNumber") as string,
+      companyName: formData.get("companyName") as string
     }
+    
+    try {
+      const res = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
 
-    await addCustomer(data)
-    setLoading(false)
-    setOpen(false)
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || "Failed to add product")
+      }
+      onCustomerAdded()
+      setLoading(false)
+      setOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add product")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -39,6 +63,11 @@ export default function AddCustomer() {
       </Button>
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
         <form onSubmit={handleSubmit}>
           <DialogTitle>Add New Customer</DialogTitle>
           <DialogContent>
@@ -46,8 +75,14 @@ export default function AddCustomer() {
               <Grid item xs={12} sm={6}>
                 <TextField required fullWidth name="name" label="Customer Name" />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={2} sm={6}>
+                  <TextField required fullWidth name="companyName" label="Company Name"/>
+              </Grid>
+              <Grid item xs={12} >
                 <TextField required fullWidth name="email" label="Email" type="email" />
+              </Grid>
+              <Grid item xs={12} >
+                <TextField required fullWidth name="gstNumber" label="GST Number" />
               </Grid>
               <Grid item xs={12}>
                 <TextField required fullWidth name="phone" label="Phone Number" />
