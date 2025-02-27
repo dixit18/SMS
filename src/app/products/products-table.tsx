@@ -11,7 +11,6 @@ import {
   Paper,
   IconButton,
   Chip,
-  TextField,
   TablePagination,
   Alert,
   Tooltip,
@@ -20,7 +19,6 @@ import {
 import { Delete, Edit } from "@mui/icons-material"
 import type { Product } from "../types"
 import EditProduct from "./edit-product"
-import { debounce } from "lodash"
 
 interface ProductsTableProps {
   products: Product[]
@@ -28,8 +26,6 @@ interface ProductsTableProps {
   page: number
   limit: number
   total: number
-  search: string
-  onSearchChange: (search: string) => void
   onPageChange: (page: number) => void
   onLimitChange: (limit: number) => void
   onProductsChange: () => void
@@ -41,8 +37,6 @@ export default function ProductsTable({
   page,
   limit,
   total,
-  search,
-  onSearchChange,
   onPageChange,
   onLimitChange,
   onProductsChange,
@@ -69,11 +63,6 @@ export default function ProductsTable({
     }
   }
 
-  const debouncedSearch = debounce((value: string) => {
-    onSearchChange(value)
-  }, 300)
-  console.log("<<<products",products)
-
   return (
     <>
       {error && (
@@ -81,14 +70,6 @@ export default function ProductsTable({
           {error}
         </Alert>
       )}
-      <TextField
-        fullWidth
-        variant="outlined"
-        placeholder="Search products..."
-        defaultValue={search}
-        onChange={(e) => debouncedSearch(e.target.value)}
-        sx={{ mb: 2 }}
-      />
 
       <TableContainer component={Paper}>
         {loading && <LinearProgress />}
@@ -97,11 +78,11 @@ export default function ProductsTable({
             <TableRow>
               <TableCell>Name</TableCell>
               <TableCell>Roll No</TableCell>
+              <TableCell>Reel No</TableCell>
               <TableCell>Category</TableCell>
-              <TableCell>Dimensions (L×W×H)</TableCell>
+              <TableCell>GSM</TableCell>
               <TableCell>Weight</TableCell>
               <TableCell>Quantity</TableCell>
-              <TableCell>Price</TableCell>
               <TableCell>Created Date</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
@@ -111,18 +92,15 @@ export default function ProductsTable({
               <TableRow key={product._id}>
                 <TableCell>{product.name}</TableCell>
                 <TableCell>{product.rollNo}</TableCell>
+                <TableCell>{product.reelNo}</TableCell>
                 <TableCell>{product.category}</TableCell>
-                <TableCell>
-                  {`${product.dimensions.length} × ${product.dimensions.width} × ${product.dimensions.height}`}
-                </TableCell>
+                <TableCell>{product.gsm}</TableCell>
                 <TableCell>{product.weight} kg</TableCell>
                 <TableCell>
                   <Chip
-                    label={`${product.quantity} ${product.unit}`}
-                    color={product.quantity > 0 ? "success" : "error"}
+                    label={`${product.quantity} pieces`}
                   />
                 </TableCell>
-                <TableCell>${product.price.toFixed(2)}</TableCell>
                 <TableCell>
                   <Tooltip title={new Date(product.createdAt).toLocaleString()}>
                     <span>{new Date(product.createdAt).toLocaleDateString()}</span>

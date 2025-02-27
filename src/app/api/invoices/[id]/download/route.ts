@@ -1,111 +1,178 @@
-import { NextResponse } from "next/server"
-import { ObjectId } from "mongodb"
-import PDFDocument from "pdfkit"
-import { getSession } from "../../../../lib/auth"
-import Invoice from "../../../../lib/models/invoice"
+import { NextResponse } from "next/server";
+import { ObjectId } from "mongodb";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { getSession } from "../../../../lib/auth";
+import Invoice from "../../../../lib/models/invoice";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await getSession()
+    const session = await getSession();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch invoice with customer details
-    const invoice = await Invoice.findOne({
+    const invoice: any = await Invoice.findOne({
       _id: new ObjectId(params.id),
       organizationId: new ObjectId(session.organizationId),
     })
       .populate("customerId")
-      .lean()
+      .lean();
 
     if (!invoice) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    // Create PDF
-    const doc = new PDFDocument({ margin: 50 })
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([600, 800]);
+    const { width, height } = page.getSize();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    // Stream the PDF directly to the response
-    const chunks: Uint8Array[] = []
-    doc.on("data", (chunk) => chunks.push(chunk))
+    page.drawText("INVOICE", {
+      x: width / 2 - 50,
+      y: height - 50,
+      size: 24,
+      font: boldFont,
+      color: rgb(0, 0, 0),
+    });
 
-    // Add content to PDF
-    doc.fontSize(20).text("INVOICE", { align: "center" }).moveDown()
+    page.drawText(`Invoice Number: ${invoice.invoiceNumber}`, {
+      x: 50,
+      y: height - 100,
+      size: 12,
+      font,
+      color: rgb(0, 0, 0),
+    });
 
-    doc
-      .fontSize(12)
-      .text(`Invoice Number: ${invoice.invoiceNumber}`)
-      .text(`Date: ${new Date(invoice.createdAt).toLocaleDateString()}`)
-      .moveDown()
+    page.drawText(`Date: ${new Date(invoice.createdAt).toLocaleDateString()}`, {
+      x: 50,
+      y: height - 120,
+      size: 12,
+      font,
+      color: rgb(0, 0, 0),
+    });
 
-    // Customer details
-    doc
-      .text("Bill To:")
-      .text(invoice.customerId.companyName)
-      .text(`GST: ${invoice.customerId.gstNumber}`)
-      .text(invoice.customerId.address.street)
-      .text(
-        `${invoice.customerId.address.city}, ${invoice.customerId.address.state} ${invoice.customerId.address.zipCode}`,
-      )
-      .text(invoice.customerId.address.country)
-      .moveDown()
+    page.drawText("Bill To:", {
+      x: 50,
+      y: height - 160,
+      size: 12,
+      font: boldFont,
+      color: rgb(0, 0, 0),
+    });
 
-    // Items table
-    const tableTop = doc.y
-    const itemX = 50
-    const descriptionX = 150
-    const detailsX = 280
-    const priceX = 370
-    const amountX = 450
+    page.drawText(invoice.customerId.companyName, {
+      x: 50,
+      y: height - 180,
+      size: 12,
+      font,
+      color: rgb(0, 0, 0),
+    });
 
-    doc
-      .text("Item", itemX, tableTop)
-      .text("Description", descriptionX, tableTop)
-      .text("Details", detailsX, tableTop)
-      .text("Price", priceX, tableTop)
-      .text("Amount", amountX, tableTop)
+    page.drawText(`GST: ${invoice.customerId.gstNumber}`, {
+      x: 50,
+      y: height - 200,
+      size: 12,
+      font,
+      color: rgb(0, 0, 0),
+    });
 
-    let y = tableTop + 20
+    page.drawText(invoice.customerId.address.street, {
+      x: 50,
+      y: height - 220,
+      size: 12,
+      font,
+      color: rgb(0, 0, 0),
+    });
 
-    // Items
-    invoice.items.forEach((item) => {
-      const details =
-        item.saleType === "dimension"
-          ? `${item.saleDetails.length} × ${item.saleDetails.width} × ${item.saleDetails.height}`
-          : `${item.saleDetails.weight} kg`
+    page.drawText(
+      `${invoice.customerId.address.city}, ${invoice.customerId.address.state} ${invoice.customerId.address.zipCode}`,
+      {
+        x: 50,
+        y: height - 240,
+        size: 12,
+        font,
+        color: rgb(0, 0, 0),
+      },
+    );
 
-      doc
-        .text(item.name, itemX, y)
-        .text(item.saleType, descriptionX, y)
-        .text(details, detailsX, y)
-        .text(`$${item.price.toFixed(2)}`, priceX, y)
-        .text(`$${item.total.toFixed(2)}`, amountX, y)
+    page.drawText(invoice.customerId.address.country, {
+      x: 50,
+      y: height - 260,
+      size: 12,
+      font,
+      color: rgb(0, 0, 0),
+    });
 
-      y += 20
-    })
+    let y = height - 300;
+    page.drawRectangle({
+      x: 50,
+      y: y - 5,
+      width: 500,
+      height: 25,
+      color: rgb(0.95, 0.95, 0.95),
+    });
 
-    // Totals
-    const totalsY = y + 20
-    doc
-      .text("Subtotal:", 350, totalsY)
-      .text(`$${invoice.subtotal.toFixed(2)}`, amountX, totalsY)
-      .text("Tax:", 350, totalsY + 20)
-      .text(`$${invoice.tax.toFixed(2)}`, amountX, totalsY + 20)
-      .text("Total:", 350, totalsY + 40)
-      .text(`$${invoice.total.toFixed(2)}`, amountX, totalsY + 40)
+    page.drawText("Item", { x: 60, y, size: 12, font: boldFont, color: rgb(0, 0, 0) });
+    page.drawText("Price", { x: 350, y, size: 12, font: boldFont, color: rgb(0, 0, 0) });
+    page.drawText("Total", { x: 450, y, size: 12, font: boldFont, color: rgb(0, 0, 0) });
 
-    doc.end()
+    y -= 30;
 
-    // Return PDF as stream
-    return new Response(Buffer.concat(chunks), {
+    invoice.items.forEach((item: any) => {
+      page.drawText(item.name, { x: 60, y, size: 12, font, color: rgb(0, 0, 0) });
+      page.drawText(`INR ${item.price.toFixed(2)}`, { x: 350, y, size: 12, font, color: rgb(0, 0, 0) });
+      page.drawText(`INR ${item.total.toFixed(2)}`, { x: 450, y, size: 12, font, color: rgb(0, 0, 0) });
+      y -= 25;
+    });
+
+    y -= 10;
+    page.drawLine({
+      start: { x: 300, y },
+      end: { x: 550, y },
+      thickness: 1,
+      color: rgb(0.8, 0.8, 0.8),
+    });
+
+    y -= 20;
+    page.drawText("Subtotal:", { x: 350, y, size: 12, font, color: rgb(0, 0, 0) });
+    page.drawText(`INR ${invoice.subtotal.toFixed(2)}`, { x: 450, y, size: 12, font, color: rgb(0, 0, 0) });
+
+    if (invoice.tax > 0) {
+      y -= 20;
+      page.drawText("GST (18%):", { x: 350, y, size: 12, font, color: rgb(0, 0, 0) });
+      page.drawText(`INR ${invoice.tax.toFixed(2)}`, { x: 450, y, size: 12, font, color: rgb(0, 0, 0) });
+    }
+
+    y -= 20;
+    page.drawLine({
+      start: { x: 300, y: y + 15 },
+      end: { x: 550, y: y + 15 },
+      thickness: 1,
+      color: rgb(0, 0, 0),
+    });
+
+    page.drawText("Total:", { x: 350, y, size: 12, font: boldFont, color: rgb(0, 0, 0) });
+    page.drawText(`INR ${invoice.total.toFixed(2)}`, { x: 450, y, size: 12, font: boldFont, color: rgb(0, 0, 0) });
+
+    const footerY = 50;
+    page.drawText("Thank you for your business!", {
+      x: width / 2 - 70,
+      y: footerY,
+      size: 12,
+      font,
+      color: rgb(0, 0, 0),
+    });
+
+    const pdfBytes = await pdfDoc.save();
+
+    return new Response(pdfBytes, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`,
       },
-    })
+    });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to generate invoice" }, { status: 500 })
+    console.error("Error generating invoice:", error);
+    return NextResponse.json({ error: "Failed to generate invoice" }, { status: 500 });
   }
 }
-

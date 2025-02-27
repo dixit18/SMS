@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getSession } from "../../lib/auth"
+import {ObjectId} from "mongodb"
 import Customer from "../../lib/models/customer"
 
 export async function GET(request: Request) {
@@ -49,3 +50,35 @@ export async function GET(request: Request) {
   }
 }
 
+export async function POST(request: Request) {
+  try {
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const data = await request.json()
+
+    const now = new Date()
+    const customer = {
+      ...data,
+      organizationId: new ObjectId(session.organizationId),
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    const result = await Customer.insertOne(customer)
+
+    return NextResponse.json(
+      {
+        ...customer,
+        _id: result._id.toString(),
+        organizationId: customer.organizationId.toString(),
+      },
+      { status: 201 },
+    )
+  } catch (error) {
+    console.log("<<<Customer",error)
+    return NextResponse.json({ error: "Failed to create customer" }, { status: 500 })
+  }
+}

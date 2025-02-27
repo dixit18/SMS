@@ -23,18 +23,19 @@
     "gcp-metadata": "latest",
     "jose": "latest",
     "kerberos": "latest",
+    "lodash": "^4.17.21",
     "mongodb": "latest",
     "mongodb-client-encryption": "latest",
     "mongoose": "latest",
     "next": "15.1.6",
+    "pdf-lib": "^1.17.1",
     "pdfkit": "^0.16.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "recharts": "2.15.0",
     "snappy": "latest",
     "socks": "latest",
-    "tailwind-merge": "^2.5.5",
-    "lodash": "latest"
+    "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

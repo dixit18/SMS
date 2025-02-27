@@ -31,6 +31,7 @@ export default function CustomersPage() {
       setCustomers(data.customers)
       setTotal(data.pagination.total)
     } catch (err) {
+      console.log("<<<<err", err)
       setError(err instanceof Error ? err.message : "Failed to load customers")
     } finally {
       setLoading(false)

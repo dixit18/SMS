@@ -15,11 +15,11 @@ import {
   TableRow,
   Chip,
   Box,
-  Divider,
   Alert,
+  Divider,
 } from "@mui/material"
+import type { Invoice } from "../types"
 import { useState } from "react"
-import { Invoice } from "../types"
 
 interface InvoiceDetailsProps {
   invoice: Invoice
@@ -55,6 +55,8 @@ export default function InvoiceDetails({ invoice, onClose, onStatusChange }: Inv
       setLoading(false)
     }
   }
+
+  const customer = typeof invoice.customerId === "object" ? invoice.customerId : null
 
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth>
@@ -98,7 +100,9 @@ export default function InvoiceDetails({ invoice, onClose, onStatusChange }: Inv
           </Grid>
         </Grid>
 
-        <Box sx={{ mt: 3 }}>
+        <Divider sx={{ my: 2 }} />
+
+        <Box sx={{ mb: 2 }}>
           <Typography variant="h6" gutterBottom>
             Items
           </Typography>
@@ -106,9 +110,8 @@ export default function InvoiceDetails({ invoice, onClose, onStatusChange }: Inv
             <TableHead>
               <TableRow>
                 <TableCell>Item</TableCell>
-                <TableCell>Sale Type</TableCell>
-                <TableCell>Details</TableCell>
                 <TableCell align="right">Price</TableCell>
+                <TableCell align="right">GST</TableCell>
                 <TableCell align="right">Total</TableCell>
               </TableRow>
             </TableHead>
@@ -116,39 +119,36 @@ export default function InvoiceDetails({ invoice, onClose, onStatusChange }: Inv
               {invoice.items.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.saleType}</TableCell>
-                  <TableCell>
-                    {item.saleType === "dimension"
-                      ? `${item.saleDetails.length} × ${item.saleDetails.width} × ${item.saleDetails.height}`
-                      : `${item.saleDetails.weight} kg`}
+                  <TableCell align="right">₹{item.price.toFixed(2)}</TableCell>
+                  <TableCell align="right">
+                    {item.taxPercentage > 0 ? (
+                      <>
+                        ₹{item.tax.toFixed(2)}
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          ({item.taxPercentage}%)
+                        </Typography>
+                      </>
+                    ) : (
+                      "-"
+                    )}
                   </TableCell>
-                  <TableCell align="right">${item.price.toFixed(2)}</TableCell>
-                  <TableCell align="right">${item.total.toFixed(2)}</TableCell>
+                  <TableCell align="right">₹{item.total.toFixed(2)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </Box>
 
-        <Box sx={{ mt: 3 }}>
-          <Divider />
-          <Grid container spacing={2} sx={{ mt: 2 }}>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Subtotal
-              </Typography>
-              <Typography variant="body1">${invoice.subtotal.toFixed(2)}</Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Tax
-              </Typography>
-              <Typography variant="body1">${invoice.tax.toFixed(2)}</Typography>
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="h6">Total: ${invoice.total.toFixed(2)}</Typography>
-            </Grid>
-          </Grid>
+        <Divider sx={{ my: 2 }} />
+
+        <Box sx={{ textAlign: "right" }}>
+          <Typography variant="body1" sx={{ mb: 1 }}>
+            Subtotal: ₹{invoice.subtotal.toFixed(2)}
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 1 }}>
+            GST: ₹{invoice.tax.toFixed(2)}
+          </Typography>
+          <Typography variant="h6">Total: ₹{invoice.total.toFixed(2)}</Typography>
         </Box>
       </DialogContent>
       <DialogActions>

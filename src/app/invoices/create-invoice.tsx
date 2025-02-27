@@ -1,15 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   Grid,
-  Autocomplete,
   Typography,
   Box,
   IconButton,
@@ -19,67 +17,35 @@ import {
   TableHead,
   TableRow,
   Alert,
-  FormControl,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
+  TextField,
 } from "@mui/material"
 import { Add, Delete } from "@mui/icons-material"
-import type { Product } from "../products/page"
+import type { Product } from "../types"
+import ProductSearch from "../components/product-search"
+import CustomerSearch from "../components/customer-search"
 
 interface CreateInvoiceProps {
   onInvoiceCreated: () => void
 }
 
-type Customer = {
-  _id: string
-  name: string
-  email: string
-  gstNumber: string
-}
-
 type InvoiceItem = {
   productId: string
   name: string
+  rollNo: string
   quantity: number
+  weight: number
   price: number
+  taxPercentage: number
+  tax: number
   total: number
-  saleType: "dimension" | "weight"
-  saleDetails: {
-    length?: number
-    width?: number
-    height?: number
-    weight?: number
-  }
 }
 
 export default function CreateInvoice({ onInvoiceCreated }: CreateInvoiceProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
   const [items, setItems] = useState<InvoiceItem[]>([])
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [customersRes, productsRes] = await Promise.all([
-          fetch("/api/customers").then((res) => res.json()),
-          fetch("/api/products").then((res) => res.json()),
-        ])
-        setCustomers(customersRes)
-        setProducts(productsRes)
-      } catch (err) {
-        setError("Failed to load data")
-      }
-    }
-
-    if (open) {
-      fetchData()
-    }
-  }, [open])
 
   const handleAddItem = () => {
     setItems([
@@ -87,11 +53,13 @@ export default function CreateInvoice({ onInvoiceCreated }: CreateInvoiceProps) 
       {
         productId: "",
         name: "",
-        quantity: 1,
+        rollNo: "",
+        quantity: 0,
+        weight: 0,
         price: 0,
+        taxPercentage: 0,
+        tax: 0,
         total: 0,
-        saleType: "dimension",
-        saleDetails: {},
       },
     ])
   }
@@ -100,44 +68,61 @@ export default function CreateInvoice({ onInvoiceCreated }: CreateInvoiceProps) 
     setItems(items.filter((_, i) => i !== index))
   }
 
-  const handleItemChange = (index: number, field: string, value: any) => {
+  const handleProductSelect = (index: number, product: Product | null) => {
+    if (!product) return
+
     const newItems = [...items]
-    const item = newItems[index]
-
-    if (field === "productId") {
-      const product = products.find((p) => p._id === value)
-      if (product) {
-        item.productId = product._id
-        item.name = product.name
-        item.price = product.price
-      }
-    } else if (field === "saleType") {
-      item.saleType = value
-      item.saleDetails = {}
-    } else if (field.startsWith("saleDetails.")) {
-      const detailField = field.split(".")[1]
-      item.saleDetails = {
-        ...item.saleDetails,
-        [detailField]: value,
-      }
+    newItems[index] = {
+      ...newItems[index],
+      productId: product._id,
+      name: product.name,
+      rollNo: product.rollNo,
+      quantity: 1,
+      weight: product.weight,
     }
-
-    // Calculate total based on sale type
-    if (item.saleType === "dimension" && item.saleDetails.length && item.saleDetails.width && item.saleDetails.height) {
-      const volume = item.saleDetails.length * item.saleDetails.width * item.saleDetails.height
-      item.total = volume * item.price
-    } else if (item.saleType === "weight" && item.saleDetails.weight) {
-      item.total = item.saleDetails.weight * item.price
-    }
-
+    updateItemTotals(newItems, index)
     setItems(newItems)
   }
 
-  const calculateTotals = () => {
-    const subtotal = items.reduce((sum, item) => sum + item.total, 0)
-    const tax = subtotal * 0.1 // 10% tax
-    const total = subtotal + tax
-    return { subtotal, tax, total }
+  const handlePriceChange = (index: number, price: number) => {
+    const newItems = [...items]
+    newItems[index].price = price
+    updateItemTotals(newItems, index)
+    setItems(newItems)
+  }
+
+  const handleTaxChange = (index: number, taxPercentage: number) => {
+    const newItems = [...items]
+    newItems[index].taxPercentage = taxPercentage
+    updateItemTotals(newItems, index)
+    setItems(newItems)
+  }
+
+  const handleQuantityChange = (index: number, quantity: number) => {
+    const newItems = [...items]
+    newItems[index].quantity = quantity
+    updateItemTotals(newItems, index)
+    setItems(newItems)
+  }
+
+  const updateItemTotals = (items: InvoiceItem[], index: number) => {
+    const item = items[index]
+    const baseAmount = item.price * item.quantity
+    const taxAmount = (baseAmount * item.taxPercentage) / 100
+    item.tax = taxAmount
+    item.total = baseAmount + taxAmount
+  }
+
+  const calculateSubtotal = () => {
+    return items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  }
+
+  const calculateTotalTax = () => {
+    return items.reduce((sum, item) => sum + item.tax, 0)
+  }
+
+  const calculateTotal = () => {
+    return items.reduce((sum, item) => sum + item.total, 0)
   }
 
   const handleSubmit = async () => {
@@ -146,15 +131,13 @@ export default function CreateInvoice({ onInvoiceCreated }: CreateInvoiceProps) 
       return
     }
 
-    if (items.length === 0) {
-      setError("Please add at least one item")
+    if (items.length === 0 || !items.every((item) => item.productId)) {
+      setError("Please add at least one valid product")
       return
     }
 
     setLoading(true)
     setError("")
-
-    const { subtotal, tax, total } = calculateTotals()
 
     try {
       const res = await fetch("/api/invoices", {
@@ -163,10 +146,20 @@ export default function CreateInvoice({ onInvoiceCreated }: CreateInvoiceProps) 
         body: JSON.stringify({
           customerId: selectedCustomer._id,
           customerName: selectedCustomer.name,
-          items,
-          subtotal,
-          tax,
-          total,
+          items: items.map((item) => ({
+            productId: item.productId,
+            name: item.name,
+            rollNo: item.rollNo,
+            quantity: item.quantity,
+            weight: item.weight,
+            price: item.price,
+            tax: item.tax,
+            taxPercentage: item.taxPercentage,
+            total: item.total,
+          })),
+          subtotal: calculateSubtotal(),
+          tax: calculateTotalTax(),
+          total: calculateTotal(),
           status: "pending",
           paymentMethod: "cash",
         }),
@@ -215,13 +208,7 @@ export default function CreateInvoice({ onInvoiceCreated }: CreateInvoiceProps) 
 
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
-              <Autocomplete
-                options={customers}
-                getOptionLabel={(customer) => `${customer.name} (${customer.gstNumber})`}
-                value={selectedCustomer}
-                onChange={(_, newValue) => setSelectedCustomer(newValue)}
-                renderInput={(params) => <TextField {...params} required label="Select Customer" variant="outlined" />}
-              />
+              <CustomerSearch onSelect={setSelectedCustomer} label="Select Customer" />
             </Grid>
 
             <Grid item xs={12}>
@@ -236,85 +223,51 @@ export default function CreateInvoice({ onInvoiceCreated }: CreateInvoiceProps) 
                 <TableHead>
                   <TableRow>
                     <TableCell>Product</TableCell>
-                    <TableCell>Sale Type</TableCell>
-                    <TableCell>Details</TableCell>
-                    <TableCell align="right">Price</TableCell>
-                    <TableCell align="right">Total</TableCell>
+                    <TableCell>Roll No</TableCell>
+                    <TableCell align="center">Quantity</TableCell>
+                    <TableCell align="center">Weight (kg)</TableCell>
+                    <TableCell align="center">Price (₹)</TableCell>
+                    <TableCell align="center">Tax (%)</TableCell>
+                    <TableCell align="right">Total (₹)</TableCell>
                     <TableCell />
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {items.map((item, index) => (
                     <TableRow key={index}>
-                      <TableCell>
-                        <Autocomplete
-                          options={products}
-                          getOptionLabel={(product) => `${product.name} (${product.rollNo})`}
-                          value={products.find((p) => p._id === item.productId) || null}
-                          onChange={(_, newValue) => handleItemChange(index, "productId", newValue ? newValue._id : "")}
-                          renderInput={(params) => <TextField {...params} required size="small" />}
-                          sx={{ width: 200 }}
+                      <TableCell width="30%">
+                        <ProductSearch onSelect={(product) => handleProductSelect(index, product)} />
+                      </TableCell>
+                      <TableCell>{item.rollNo}</TableCell>
+                      <TableCell align="center">
+                        <TextField
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => handleQuantityChange(index, Number(e.target.value))}
+                          inputProps={{ min: 1, style: { textAlign: "center" } }}
+                          sx={{ width: "80px" }}
                         />
                       </TableCell>
-                      <TableCell>
-                        <FormControl>
-                          <RadioGroup
-                            row
-                            value={item.saleType}
-                            onChange={(e) => handleItemChange(index, "saleType", e.target.value)}
-                          >
-                            <FormControlLabel value="dimension" control={<Radio size="small" />} label="Dimension" />
-                            <FormControlLabel value="weight" control={<Radio size="small" />} label="Weight" />
-                          </RadioGroup>
-                        </FormControl>
+                      <TableCell align="center">{item.weight}</TableCell>
+                      <TableCell align="center">
+                        <TextField
+                          type="number"
+                          value={item.price}
+                          onChange={(e) => handlePriceChange(index, Number(e.target.value))}
+                          inputProps={{ min: 0, step: "0.01", style: { textAlign: "center" } }}
+                          sx={{ width: "100px" }}
+                        />
                       </TableCell>
-                      <TableCell>
-                        {item.saleType === "dimension" ? (
-                          <Grid container spacing={1}>
-                            <Grid item xs={4}>
-                              <TextField
-                                size="small"
-                                type="number"
-                                label="L"
-                                value={item.saleDetails.length || ""}
-                                onChange={(e) => handleItemChange(index, "saleDetails.length", Number(e.target.value))}
-                                inputProps={{ step: 0.01 }}
-                              />
-                            </Grid>
-                            <Grid item xs={4}>
-                              <TextField
-                                size="small"
-                                type="number"
-                                label="W"
-                                value={item.saleDetails.width || ""}
-                                onChange={(e) => handleItemChange(index, "saleDetails.width", Number(e.target.value))}
-                                inputProps={{ step: 0.01 }}
-                              />
-                            </Grid>
-                            <Grid item xs={4}>
-                              <TextField
-                                size="small"
-                                type="number"
-                                label="H"
-                                value={item.saleDetails.height || ""}
-                                onChange={(e) => handleItemChange(index, "saleDetails.height", Number(e.target.value))}
-                                inputProps={{ step: 0.01 }}
-                              />
-                            </Grid>
-                          </Grid>
-                        ) : (
-                          <TextField
-                            size="small"
-                            type="number"
-                            label="Weight (kg)"
-                            value={item.saleDetails.weight || ""}
-                            onChange={(e) => handleItemChange(index, "saleDetails.weight", Number(e.target.value))}
-                            inputProps={{ step: 0.01 }}
-                          />
-                        )}
+                      <TableCell align="center">
+                        <TextField
+                          type="number"
+                          value={item.taxPercentage}
+                          onChange={(e) => handleTaxChange(index, Number(e.target.value))}
+                          inputProps={{ min: 0, max: 100, step: "0.1", style: { textAlign: "center" } }}
+                          sx={{ width: "80px" }}
+                        />
                       </TableCell>
-                      <TableCell align="right">${item.price.toFixed(2)}</TableCell>
-                      <TableCell align="right">${item.total.toFixed(2)}</TableCell>
+                      <TableCell align="right">₹{item.total.toFixed(2)}</TableCell>
                       <TableCell>
                         <IconButton size="small" onClick={() => handleRemoveItem(index)}>
                           <Delete />
@@ -325,13 +278,15 @@ export default function CreateInvoice({ onInvoiceCreated }: CreateInvoiceProps) 
                 </TableBody>
               </Table>
 
-              {items.length > 0 && (
-                <Box sx={{ mt: 2, textAlign: "right" }}>
-                  <Typography>Subtotal: ${calculateTotals().subtotal.toFixed(2)}</Typography>
-                  <Typography>Tax (10%): ${calculateTotals().tax.toFixed(2)}</Typography>
-                  <Typography variant="h6">Total: ${calculateTotals().total.toFixed(2)}</Typography>
-                </Box>
-              )}
+              <Box sx={{ mt: 2, textAlign: "right" }}>
+                <Typography variant="body1" color="text.secondary">
+                  Subtotal: ₹{calculateSubtotal().toFixed(2)}
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Total Tax: ₹{calculateTotalTax().toFixed(2)}
+                </Typography>
+                <Typography variant="h6">Total: ₹{calculateTotal().toFixed(2)}</Typography>
+              </Box>
             </Grid>
           </Grid>
         </DialogContent>

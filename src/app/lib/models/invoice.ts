@@ -10,30 +10,23 @@ const invoiceItemSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  quantity: {
-    type: Number,
-    required: true,
-  },
   price: {
     type: Number,
     required: true,
   },
+  tax: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  taxPercentage: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
   total: {
     type: Number,
     required: true,
-  },
-  saleType: {
-    type: String,
-    required: true,
-    enum: ["dimension", "weight"],
-  },
-  saleDetails: {
-    // For dimension-based sales
-    length: Number,
-    width: Number,
-    height: Number,
-    // For weight-based sales
-    weight: Number,
   },
 })
 

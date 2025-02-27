@@ -1,6 +1,6 @@
 import mongoose from "mongoose"
 
-const uri = "mongodb://localhost:27017/"
+const uri = "mongodb://localhost:27017/sms"
 
 if (!uri) {
   throw new Error("MONGODB_URI is missing")

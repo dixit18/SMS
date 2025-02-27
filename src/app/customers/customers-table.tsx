@@ -16,10 +16,11 @@ import {
   Tooltip,
   LinearProgress,
 } from "@mui/material"
-import { Delete, Edit } from "@mui/icons-material"
+import { Delete, Edit, AccountBalance } from "@mui/icons-material"
 import type { Customer } from "../types"
 import EditCustomer from "./edit-customer"
 import { debounce } from "lodash"
+import { useRouter } from "next/navigation"
 
 interface CustomersTableProps {
   customers: Customer[]
@@ -46,6 +47,7 @@ export default function CustomersTable({
   onLimitChange,
   onCustomersChange,
 }: CustomersTableProps) {
+  const router = useRouter()
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
   const [error, setError] = useState("")
 
@@ -66,6 +68,10 @@ export default function CustomersTable({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete customer")
     }
+  }
+
+  const handleViewLedger = (customerId: string) => {
+    router.push(`/customers/${customerId}/ledger`)
   }
 
   const debouncedSearch = debounce((value: string) => {
@@ -124,12 +130,21 @@ export default function CustomersTable({
                   </Tooltip>
                 </TableCell>
                 <TableCell>
-                  <IconButton size="small" onClick={() => setEditCustomer(customer)}>
-                    <Edit />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => handleDelete(customer._id)}>
-                    <Delete />
-                  </IconButton>
+                  <Tooltip title="View Ledger">
+                    <IconButton size="small" onClick={() => handleViewLedger(customer._id)}>
+                      <AccountBalance />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Edit Customer">
+                    <IconButton size="small" onClick={() => setEditCustomer(customer)}>
+                      <Edit />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete Customer">
+                    <IconButton size="small" onClick={() => handleDelete(customer._id)}>
+                      <Delete />
+                    </IconButton>
+                  </Tooltip>
                 </TableCell>
               </TableRow>
             ))}

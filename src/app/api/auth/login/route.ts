@@ -2,9 +2,11 @@ import { NextResponse } from "next/server"
 import { compare } from "bcryptjs"
 import { encrypt } from "../../../lib/auth"
 import User from "../../../lib/models/user"
+import connectDB from "@/app/lib/mongodb"
 
 export async function POST(request: Request) {
   try {
+    await connectDB()
     const { email, password } = await request.json()
 
     const user = await User.findOne({ email }).select("+password")
@@ -36,6 +38,7 @@ export async function POST(request: Request) {
 
     return response
   } catch (error) {
+    console.log("<<<error", error)
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 })
   }
 }

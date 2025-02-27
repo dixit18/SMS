@@ -41,9 +41,10 @@ export default function AddCustomer({ onCustomerAdded }: CustomersTableProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
-
+console.log("<<<<res",res)
       if (!res.ok) {
         const errorData = await res.json()
+        console.log("<<<<errorData", errorData)
         throw new Error(errorData.error || "Failed to add product")
       }
       onCustomerAdded()

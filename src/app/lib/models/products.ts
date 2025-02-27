@@ -14,6 +14,11 @@ const productSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  size: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   rollNo: {
     type: String,
     required: true,
@@ -30,26 +35,7 @@ const productSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  dimensions: {
-    length: {
-      type: Number,
-      required: true,
-    },
-    width: {
-      type: Number,
-      required: true,
-    },
-    height: {
-      type: Number,
-      required: true,
-    },
-  },
   quantity: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  price: {
     type: Number,
     required: true,
     min: 0,
@@ -57,11 +43,26 @@ const productSchema = new mongoose.Schema({
   unit: {
     type: String,
     required: true,
-    enum: ["pieces", "kg", "meters"],
+    enum: ["pieces", "kg"],
   },
   category: {
     type: String,
     required: true,
+  },
+  status: {
+    type: String,
+    required: true,
+    enum: ["available", "sold"],
+    default: "available",
+  },
+  soldAt: {
+    type: Date,
+    default: null,
+  },
+  invoiceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Invoice",
+    default: null,
   },
   organizationId: {
     type: mongoose.Schema.Types.ObjectId,

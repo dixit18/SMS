@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
-import clientPromise from "../../../lib/mongodb"
 import { getSession } from "../../../lib/auth"
+import Product from "../../../lib/models/products"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -10,13 +10,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const client = await clientPromise
-    const collection = client.db("stockmanagement").collection("products")
-
-    const product = await collection.findOne({
+    const product = await Product.findOne({
       _id: new ObjectId(params.id),
       organizationId: new ObjectId(session.organizationId),
-    })
+    }).lean()
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
@@ -40,10 +37,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     const data = await request.json()
-    const client = await clientPromise
-    const collection = client.db("stockmanagement").collection("products")
 
-    const result = await collection.updateOne(
+    const result = await Product.findOneAndUpdate(
       {
         _id: new ObjectId(params.id),
         organizationId: new ObjectId(session.organizationId),
@@ -54,13 +49,21 @@ export async function PUT(request: Request, { params }: { params: { id: string }
           updatedAt: new Date(),
         },
       },
+      { new: true },
     )
 
-    if (result.matchedCount === 0) {
+    if (!result) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      product: {
+        ...result.toObject(),
+        _id: result._id.toString(),
+        organizationId: result.organizationId.toString(),
+      },
+    })
   } catch (error) {
     return NextResponse.json({ error: "Failed to update product" }, { status: 500 })
   }
@@ -73,15 +76,22 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const client = await clientPromise
-    const collection = client.db("stockmanagement").collection("products")
+    // Instead of deleting, mark as sold with no invoice
+    const result = await Product.findOneAndUpdate(
+      {
+        _id: new ObjectId(params.id),
+        organizationId: new ObjectId(session.organizationId),
+      },
+      {
+        $set: {
+          status: "sold",
+          soldAt: new Date(),
+          updatedAt: new Date(),
+        },
+      },
+    )
 
-    const result = await collection.deleteOne({
-      _id: new ObjectId(params.id),
-      organizationId: new ObjectId(session.organizationId),
-    })
-
-    if (result.deletedCount === 0) {
+    if (!result) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
 

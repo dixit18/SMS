@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import {
   Button,
@@ -13,7 +15,9 @@ import {
   Alert,
 } from "@mui/material"
 import { Add } from "@mui/icons-material"
-import { categories, units } from "../lib/constant"
+
+export const units = ["pieces", "kg"]
+export const categories = ["Napkin Grade", "Fasial Grade", "Toilet Grade", "Non Wowen", "Airlaid", "Colour"]
 
 interface AddProductProps {
   onProductAdded: () => void
@@ -34,16 +38,11 @@ export default function AddProduct({ onProductAdded }: AddProductProps) {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       gsm: Number(formData.get("gsm")),
+      size: formData.get("size") as string,
       rollNo: formData.get("rollNo") as string,
       reelNo: formData.get("reelNo") as string,
       diameter: Number(formData.get("diameter")),
       weight: Number(formData.get("weight")),
-      dimensions: {
-        length: Number(formData.get("length")),
-        width: Number(formData.get("width")),
-        height: Number(formData.get("height")),
-      },
-      price: Number(formData.get("price")),
       quantity: Number(formData.get("quantity")),
       unit: formData.get("unit") as string,
       category: formData.get("category") as string,
@@ -99,7 +98,9 @@ export default function AddProduct({ onProductAdded }: AddProductProps) {
               <Grid item xs={12} sm={6}>
                 <TextField required fullWidth name="name" label="Product Name" />
               </Grid>
-              
+              <Grid item xs={12} sm={6}>
+                <TextField required fullWidth name="size" label="Size" />
+              </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField required fullWidth name="gsm" label="GSM" type="number" inputProps={{ min: 0 }} />
               </Grid>
@@ -120,8 +121,16 @@ export default function AddProduct({ onProductAdded }: AddProductProps) {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
+                <TextField required fullWidth select name="unit" label="Unit" defaultValue="">
+                  {units.map((unit) => (
+                    <MenuItem key={unit} value={unit}>
+                      {unit}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
                 <TextField
-                  required
                   fullWidth
                   name="weight"
                   label="Weight (kg)"
@@ -134,63 +143,14 @@ export default function AddProduct({ onProductAdded }: AddProductProps) {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  required
-                  fullWidth
-                  name="price"
-                  label="Price"
-                  type="number"
-                  inputProps={{ min: 0, step: 0.01 }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
                   fullWidth
                   name="quantity"
-                  label="Initial Quantity"
+                  label="Quantity (pieces)"
                   type="number"
                   inputProps={{ min: 0 }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  required
-                  fullWidth
-                  name="length"
-                  label="Length"
-                  type="number"
-                  inputProps={{ min: 0, step: 0.01 }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  required
-                  fullWidth
-                  name="width"
-                  label="Width"
-                  type="number"
-                  inputProps={{ min: 0, step: 0.01 }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  required
-                  fullWidth
-                  name="height"
-                  label="Height"
-                  type="number"
-                  inputProps={{ min: 0, step: 0.01 }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField required fullWidth select name="unit" label="Unit" defaultValue="">
-                  {units.map((unit) => (
-                    <MenuItem key={unit} value={unit}>
-                      {unit}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
+             
               <Grid item xs={12} sm={6}>
                 <TextField required fullWidth select name="category" label="Category" defaultValue="">
                   {categories.map((category) => (

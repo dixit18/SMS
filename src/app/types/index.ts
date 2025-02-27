@@ -1,36 +1,48 @@
 import type { ObjectId } from "mongodb"
 
-// export interface PaginatedResponse<T> {
-//   items: T[]
-//   pagination: {
-//     page: number
-//     limit: number
-//     total: number
-//     totalPages: number
-//   }
-// }
+export interface PaginatedResponse<T> {
+  items: T[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
 
 export interface Product {
   _id: string
   name: string
   description: string
   gsm: number
+  size: string
   rollNo: string
   reelNo: string
   diameter: number
   weight: number
-  dimensions: {
-    length: number
-    width: number
-    height: number
-  }
   quantity: number
-  price: number
   unit: string
   category: string
+  status: "available" | "sold"
+  soldAt?: string
+  invoiceId?: string
   organizationId: string | ObjectId
   createdAt: string
   updatedAt: string
+}
+
+export interface ProductsResponse {
+  products: Product[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  totals: {
+    kg?: number
+    pieces?: number
+  }
 }
 
 export interface Customer {
@@ -60,16 +72,10 @@ export interface Invoice {
   items: {
     productId: string
     name: string
-    quantity: number
     price: number
+    tax: number
+    taxPercentage: number
     total: number
-    saleType: "dimension" | "weight"
-    saleDetails: {
-      length?: number
-      width?: number
-      height?: number
-      weight?: number
-    }
   }[]
   subtotal: number
   tax: number
