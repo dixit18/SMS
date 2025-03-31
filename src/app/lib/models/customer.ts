@@ -49,6 +49,11 @@ const customerSchema = new mongoose.Schema({
       required: true,
     },
   },
+  placeOfSupply: {
+    type: String,
+    required: true,
+    default: "24-GUJARAT",
+  },
   organizationId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,

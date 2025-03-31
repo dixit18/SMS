@@ -15,9 +15,7 @@ import {
 } from "@mui/material"
 import type { Product } from "../types"
 import { useState } from "react"
-
-const units = ["pieces", "kg"]
-const categories = ["Paper", "Cardboard", "Packaging", "Other"]
+import { categories, units } from "./add-product"
 
 interface EditProductProps {
   product: Product
@@ -160,7 +158,17 @@ export default function EditProduct({ product, onClose, onUpdate }: EditProductP
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={loading}>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            sx={{
+              bgcolor: "black",
+              "&:hover": {
+                bgcolor: "#333",
+              },
+            }}
+          >
             Save Changes
           </Button>
         </DialogActions>

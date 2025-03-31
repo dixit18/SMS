@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Table,
   TableBody,
@@ -23,7 +23,7 @@ import InvoiceDetails from "./invoice-details"
 import { debounce } from "lodash"
 
 interface InvoiceListProps {
-  invoices: Invoice[]
+  invoices: any[]
   loading: boolean
   page: number
   limit: number
@@ -49,6 +49,12 @@ export default function InvoiceList({
 }: InvoiceListProps) {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [error, setError] = useState("")
+  const [mounted, setMounted] = useState(false)
+
+  // Set mounted state to true after component mounts
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -86,6 +92,12 @@ export default function InvoiceList({
     onSearchChange(value)
   }, 300)
 
+  // Format date safely to avoid hydration errors
+  const formatDate = (date: string | Date) => {
+    if (!mounted) return "" // Return empty string during server rendering
+    return new Date(date).toLocaleDateString()
+  }
+
   return (
     <>
       {error && (
@@ -120,12 +132,16 @@ export default function InvoiceList({
             {invoices.map((invoice) => (
               <TableRow key={invoice._id}>
                 <TableCell>{invoice.invoiceNumber}</TableCell>
-                <TableCell>{invoice.customerName}</TableCell>
+                <TableCell>{invoice.customerId?.name}</TableCell>
                 <TableCell>{typeof invoice.customerId === "object" && invoice.customerId.companyName}</TableCell>
                 <TableCell>
-                  <Tooltip title={new Date(invoice.createdAt).toLocaleString()}>
-                    <span>{new Date(invoice.createdAt).toLocaleDateString()}</span>
-                  </Tooltip>
+                  {mounted ? (
+                    <Tooltip title={new Date(invoice.createdAt).toLocaleString()}>
+                      <span>{formatDate(invoice.createdAt)}</span>
+                    </Tooltip>
+                  ) : (
+                    <span>Loading...</span>
+                  )}
                 </TableCell>
                 <TableCell>${invoice.total.toFixed(2)}</TableCell>
                 <TableCell>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import {
   Container,
   Typography,
@@ -22,8 +22,8 @@ import {
 } from "@mui/material"
 import { Download } from "@mui/icons-material"
 import { useParams } from "next/navigation"
-import React from "react"
 import type { Customer, Invoice } from "@/app/types"
+import { debounce } from "lodash"
 
 interface LedgerSummary {
   totalInvoices: number
@@ -46,11 +46,30 @@ export default function CustomerLedger() {
   const [endDate, setEndDate] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(1)
+  const observer = useRef<IntersectionObserver>()
+  const lastTransactionRef = useCallback(
+    (node: HTMLElement | null) => {
+      if (loading) return
+      if (observer.current) observer.current.disconnect()
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          setPage((prev) => prev + 1)
+        }
+      })
+      if (node) observer.current.observe(node)
+    },
+    [loading, hasMore],
+  )
 
   useEffect(() => {
     fetchCustomerData()
-    fetchLedgerData()
-  }, []) // Initial load
+  }, []) // Initial customer data load
+
+  useEffect(() => {
+    fetchLedgerData(true)
+  }, [startDate, endDate]) // Fetch data when dates or page changes
 
   const fetchCustomerData = async () => {
     try {
@@ -63,25 +82,41 @@ export default function CustomerLedger() {
     }
   }
 
-  const fetchLedgerData = async () => {
+  const fetchLedgerData = async (reset = false) => {
     try {
       setLoading(true)
-      const queryParams = new URLSearchParams()
-      if (startDate) queryParams.append("startDate", startDate)
-      if (endDate) queryParams.append("endDate", endDate)
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: "20",
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+      })
 
       const res = await fetch(`/api/customers/${params.id}/ledger?${queryParams}`)
       if (!res.ok) throw new Error("Failed to fetch ledger data")
 
       const data = await res.json()
-      setTransactions(data.transactions)
+
+      if (reset) {
+        setTransactions(data.transactions)
+      } else {
+        setTransactions((prev) => [...prev, ...data.transactions])
+      }
+
       setSummary(data.summary)
+      setHasMore(data.hasMore)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load ledger data")
     } finally {
       setLoading(false)
     }
   }
+
+  const handleDateChange = debounce((newStartDate: string, newEndDate: string) => {
+    setStartDate(newStartDate)
+    setEndDate(newEndDate)
+    setPage(1) // Reset to first page when dates change
+  }, 500)
 
   const handleDownload = async () => {
     try {
@@ -153,7 +188,7 @@ export default function CustomerLedger() {
                   <Typography color="text.secondary" gutterBottom>
                     Total Amount
                   </Typography>
-                  <Typography variant="h5">${summary.totalAmount.toFixed(2)}</Typography>
+                  <Typography variant="h5">₹{summary.totalAmount.toFixed(2)}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -164,7 +199,7 @@ export default function CustomerLedger() {
                     Paid Amount
                   </Typography>
                   <Typography variant="h5" color="success.main">
-                    ${summary.paidAmount.toFixed(2)}
+                    ₹{summary.paidAmount.toFixed(2)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -176,7 +211,7 @@ export default function CustomerLedger() {
                     Pending Amount
                   </Typography>
                   <Typography variant="h5" color="warning.main">
-                    ${summary.pendingAmount.toFixed(2)}
+                    ₹{summary.pendingAmount.toFixed(2)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -194,7 +229,7 @@ export default function CustomerLedger() {
                   type="date"
                   label="Start Date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => handleDateChange(e.target.value, endDate)}
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
@@ -204,26 +239,12 @@ export default function CustomerLedger() {
                   type="date"
                   label="End Date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => handleDateChange(startDate, e.target.value)}
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
                 <Box sx={{ display: "flex", gap: 1 }}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={fetchLedgerData}
-                    disabled={loading}
-                    sx={{
-                      bgcolor: "black",
-                      "&:hover": {
-                        bgcolor: "#333",
-                      },
-                    }}
-                  >
-                    Apply Filter
-                  </Button>
                   <Button
                     fullWidth
                     variant="outlined"
@@ -242,7 +263,6 @@ export default function CustomerLedger() {
         {/* Transactions Table */}
         <Grid item xs={12}>
           <TableContainer component={Paper}>
-            {loading && <CircularProgress />}
             <Table>
               <TableHead>
                 <TableRow>
@@ -254,12 +274,12 @@ export default function CustomerLedger() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {transactions.map((transaction) => (
-                  <TableRow key={transaction._id}>
+                {transactions.map((transaction, index) => (
+                  <TableRow key={transaction._id} ref={index === transactions.length - 1 ? lastTransactionRef : null}>
                     <TableCell>{new Date(transaction.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>{transaction.invoiceNumber}</TableCell>
                     <TableCell>{transaction.items.length} items</TableCell>
-                    <TableCell align="right">${transaction.total.toFixed(2)}</TableCell>
+                    <TableCell align="right">₹{transaction.total.toFixed(2)}</TableCell>
                     <TableCell>
                       <Typography
                         component="span"
@@ -279,6 +299,11 @@ export default function CustomerLedger() {
                 ))}
               </TableBody>
             </Table>
+            {loading && (
+              <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
+                <CircularProgress />
+              </Box>
+            )}
           </TableContainer>
         </Grid>
       </Grid>

@@ -10,7 +10,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const product = await Product.findOne({
+    const product: any = await Product.findOne({
       _id: new ObjectId(params.id),
       organizationId: new ObjectId(session.organizationId),
     }).lean()
@@ -37,6 +37,31 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     const data = await request.json()
+
+    // Validate required fields
+    const requiredFields = [
+      "name",
+      "gsm",
+      "size",
+      "rollNo",
+      "reelNo",
+      "diameter",
+      "weight",
+      "quantity",
+      "unit",
+      "category",
+    ]
+    for (const field of requiredFields) {
+      if (data[field] === undefined || data[field] === "") {
+        return NextResponse.json({ error: `${field} is required` }, { status: 400 })
+      }
+    }
+
+    // Convert numeric fields
+    if (data.gsm) data.gsm = Number(data.gsm)
+    if (data.diameter) data.diameter = Number(data.diameter)
+    if (data.weight) data.weight = Number(data.weight)
+    if (data.quantity) data.quantity = Number(data.quantity)
 
     const result = await Product.findOneAndUpdate(
       {
@@ -65,7 +90,12 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       },
     })
   } catch (error) {
-    return NextResponse.json({ error: "Failed to update product" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Failed to update product",
+      },
+      { status: 500 },
+    )
   }
 }
 

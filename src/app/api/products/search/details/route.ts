@@ -18,10 +18,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Search term is required" }, { status: 400 })
     }
 
-    // Find the product
-    const product = await Product.findOne({
+    // Find the product - include both sold and unsold products
+    const product: any = await Product.findOne({
       organizationId: new ObjectId(session.organizationId),
-      $or: [{ name: { $regex: searchTerm, $options: "i" } }, { rollNo: { $regex: searchTerm, $options: "i" } }],
+      $or: [
+        { name: { $regex: searchTerm, $options: "i" } },
+        { rollNo: { $regex: searchTerm, $options: "i" } },
+        { reelNo: { $regex: searchTerm, $options: "i" } },
+      ],
     }).lean()
 
     if (!product) {
@@ -29,7 +33,7 @@ export async function GET(request: Request) {
     }
 
     // If product is sold, get sales history
-    let salesHistory = []
+    let salesHistory: any[] = []
     if (product.status === "sold") {
       const invoices = await Invoice.aggregate([
         {
@@ -47,13 +51,16 @@ export async function GET(request: Request) {
           },
         },
         {
-          $unwind: "$customer",
+          $unwind: {
+            path: "$customer",
+            preserveNullAndEmptyArrays: true,
+          },
         },
         {
           $project: {
             invoiceNumber: 1,
-            customerName: "$customer.name",
-            companyName: "$customer.companyName",
+            customerName: { $ifNull: ["$customer.name", "$customerName"] },
+            companyName: { $ifNull: ["$customer.companyName", ""] },
             date: "$createdAt",
             items: {
               $filter: {
@@ -71,8 +78,8 @@ export async function GET(request: Request) {
         customerName: invoice.customerName,
         companyName: invoice.companyName,
         date: invoice.date,
-        quantity: invoice.items[0].quantity,
-        price: invoice.items[0].price,
+        quantity: invoice.items[0]?.quantity || 0,
+        price: invoice.items[0]?.price || 0,
       }))
     }
 

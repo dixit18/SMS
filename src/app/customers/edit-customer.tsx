@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Grid, Alert } from "@mui/material"
 import type { Customer } from "../types"
 import { useState } from "react"
@@ -26,6 +28,7 @@ export default function EditCustomer({ customer, onClose, onUpdate }: EditCustom
       gstNumber: formData.get("gstNumber") as string,
       email: formData.get("email") as string,
       phone: formData.get("phone") as string,
+      placeOfSupply: formData.get("placeOfSupply") as string,
       address: {
         street: formData.get("street") as string,
         city: formData.get("city") as string,
@@ -67,7 +70,7 @@ export default function EditCustomer({ customer, onClose, onUpdate }: EditCustom
           )}
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
-              <TextField required fullWidth name="name" label="Customer Name" defaultValue={customer.name} />
+              <TextField required fullWidth name="name" label="Contact Person Name" defaultValue={customer.name} />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -80,6 +83,15 @@ export default function EditCustomer({ customer, onClose, onUpdate }: EditCustom
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField required fullWidth name="gstNumber" label="GST Number" defaultValue={customer.gstNumber} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                required
+                fullWidth
+                name="placeOfSupply"
+                label="Place of Supply"
+                defaultValue={customer.placeOfSupply || "24-GUJARAT"}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField required fullWidth name="email" label="Email" type="email" defaultValue={customer.email} />
@@ -118,7 +130,17 @@ export default function EditCustomer({ customer, onClose, onUpdate }: EditCustom
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={loading}>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            sx={{
+              bgcolor: "black",
+              "&:hover": {
+                bgcolor: "#333",
+              },
+            }}
+          >
             Save Changes
           </Button>
         </DialogActions>

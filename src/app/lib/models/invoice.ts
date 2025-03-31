@@ -10,16 +10,43 @@ const invoiceItemSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  price: {
+  rollNo: {
+    type: String,
+    required: true,
+  },
+  quantity: {
     type: Number,
     required: true,
   },
-  tax: {
+  weight: {
+    type: Number,
+    required: true,
+    default: 0, // Add default value to prevent validation errors
+  },
+  rate: {
+    type: Number,
+    required: true,
+  },
+  taxableValue: {
+    type: Number,
+    required: true,
+  },
+  sgstPercentage: {
+    type: Number,
+    required: true,
+    default: 6, // Changed from 9 to 6
+  },
+  sgstAmount: {
     type: Number,
     required: true,
     default: 0,
   },
-  taxPercentage: {
+  cgstPercentage: {
+    type: Number,
+    required: true,
+    default: 6, // Changed from 9 to 6
+  },
+  cgstAmount: {
     type: Number,
     required: true,
     default: 0,
@@ -36,27 +63,43 @@ const invoiceSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  invoiceDate: {
+    type: Date,
+    required: true,
+    default: Date.now,
+  },
+  dueDate: {
+    type: Date,
+    required: true,
+    default: new Date()
+  },
   customerId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: "Customer",
-  },
-  customerName: {
-    type: String,
-    required: true,
   },
   items: [invoiceItemSchema],
   subtotal: {
     type: Number,
     required: true,
   },
-  tax: {
+  sgstTotal: {
     type: Number,
     required: true,
+    default: 0,
+  },
+  cgstTotal: {
+    type: Number,
+    required: true,
+    default: 0,
   },
   total: {
     type: Number,
     required: true,
+  },
+  roundOff: {
+    type: Number,
+    default: 0,
   },
   status: {
     type: String,
@@ -67,6 +110,46 @@ const invoiceSchema = new mongoose.Schema({
   paymentMethod: {
     type: String,
     required: true,
+  },
+  paymentTerms: {
+    type: Number,
+    default: 10, // Default payment terms in days
+  },
+  vehicleNo: {
+    type: String,
+    default: "",
+  },
+  transportName: {
+    type: String,
+    default: "",
+  },
+  lrNo: {
+    type: String,
+    default: "",
+  },
+  lrDate: {
+    type: Date,
+  },
+  ewayBillNo: {
+    type: String,
+    default: "",
+  },
+  ewayBillDate: {
+    type: Date,
+  },
+  poNo: {
+    type: String,
+    default: "",
+  },
+  poDate: {
+    type: Date,
+  },
+  challanNo: {
+    type: String,
+    default: "",
+  },
+  challanDate: {
+    type: Date,
   },
   organizationId: {
     type: mongoose.Schema.Types.ObjectId,

@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server"
 import { getSession } from "../../lib/auth"
 import Invoice from "../../lib/models/invoice"
-import products from "../../lib/models/products"
-import connectDB from "../../lib/mongodb"
+import Product from "../../lib/models/products"
+import Customer from "../../lib/models/customer"
 import mongoose from "mongoose"
 
 export async function GET(request: Request) {
   try {
-    await connectDB()
     const session = await getSession()
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -52,7 +51,6 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.log("Error fetching invoices:", error)
     return NextResponse.json({ error: "Failed to fetch invoices" }, { status: 500 })
   }
 }
@@ -60,9 +58,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json()
-    const session = await getSession()
-    if (!session) {
+    const sessionData = await getSession()
+    if (!sessionData) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Fetch customer details
+    const customer = await Customer.findById(data.customerId).lean()
+    if (!customer) {
+      return NextResponse.json({ error: "Customer not found" }, { status: 404 })
     }
 
     // Generate invoice number
@@ -76,34 +80,67 @@ export async function POST(request: Request) {
 
     const sequence = lastInvoice ? String(Number(lastInvoice.invoiceNumber.split("-")[2]) + 1).padStart(3, "0") : "001"
 
+    // Calculate totals
+    let subtotal = 0
+    let sgstTotal = 0
+    let cgstTotal = 0
+
+    // Process each item
+    const processedItems = data.items.map((item: any) => {
+      // Ensure weight is set
+      if (item.weight === undefined || item.weight === null) {
+        item.weight = 0
+      }
+
+      const taxableValue = item.taxableValue || item.quantity * item.rate
+      const sgstAmount = (taxableValue * item.sgstPercentage) / 100
+      const cgstAmount = (taxableValue * item.cgstPercentage) / 100
+
+      subtotal += taxableValue
+      sgstTotal += sgstAmount
+      cgstTotal += cgstAmount
+
+      return {
+        ...item,
+        taxableValue,
+        sgstAmount,
+        cgstAmount,
+        total: taxableValue + sgstAmount + cgstAmount,
+      }
+    })
+
+    // Calculate total and round off
+    const totalBeforeRounding = subtotal + sgstTotal + cgstTotal
+    const roundedTotal = Math.round(totalBeforeRounding)
+    const roundOff = roundedTotal - totalBeforeRounding
+
+    // Create invoice
     const invoice = new Invoice({
       ...data,
-      organizationId: session.organizationId,
+      items: processedItems,
+      subtotal,
+      sgstTotal,
+      cgstTotal,
+      total: roundedTotal,
+      roundOff,
+      organizationId: sessionData.organizationId,
       invoiceNumber: `INV-${dateStr}-${sequence}`,
     })
 
     await invoice.save()
 
-    // Update product quantities
+    // Mark products as sold (without transaction)
     for (const item of data.items) {
-      const product = await products.findById(item.productId)
-      if (!product) {
-        throw new Error(`Product not found: ${item.productId}`)
-      }
-
-      // Calculate quantity reduction based on sale type
-     
-      await products.findByIdAndUpdate(item.productId, {
+      await Product.findByIdAndUpdate(item.productId, {
         status: "sold",
         soldAt: new Date(),
         invoiceId: invoice._id,
       })
-      
     }
 
     return NextResponse.json(invoice, { status: 201 })
   } catch (error) {
-    console.log("Error creating invoice:", error)
+    console.error("Invoice creation error:", error)
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Failed to create invoice",
@@ -112,3 +149,4 @@ export async function POST(request: Request) {
     )
   }
 }
+

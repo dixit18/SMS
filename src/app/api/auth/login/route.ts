@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { compare } from "bcryptjs"
 import { encrypt } from "../../../lib/auth"
 import User from "../../../lib/models/user"
-import connectDB from "@/app/lib/mongodb"
+import connectDB from "../../../lib/mongodb"
 
 export async function POST(request: Request) {
   try {

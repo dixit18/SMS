@@ -7,6 +7,7 @@ import InvoiceList from "./invoice-list"
 import type { Invoice } from "../types"
 
 export default function InvoicesPage() {
+  const [mounted, setMounted] = useState(false)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -14,6 +15,9 @@ export default function InvoicesPage() {
   const [limit, setLimit] = useState(10)
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState("")
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const fetchInvoices = useCallback(async () => {
     try {

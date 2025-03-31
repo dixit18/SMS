@@ -3,7 +3,7 @@ import { hash } from "bcryptjs";
 import { encrypt } from "../../../lib/auth";
 import User from "../../../lib/models/user";
 import Organization from "../../../lib/models/organization";
-import connectDB from "@/app/lib/mongodb";
+import connectDB from "../../../lib/mongodb";
 
 export async function POST(request: Request) {
   try {
