@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useMemo } from "react"
 import { Autocomplete, TextField, CircularProgress } from "@mui/material"
-import debounce from "lodash/debounce"
+import {debounce} from "lodash"
 import type { Customer } from "../types"
 
 interface CustomerSearchProps {
