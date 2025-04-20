@@ -3,14 +3,14 @@ import { ObjectId } from "mongodb"
 import { getSession } from "../../../../lib/auth"
 import Invoice from "../../../../lib/models/invoice"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession()
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const productId = params.id
+    const productId = (await params).id
 
     // Find invoices containing this product
     const invoices : any[] = await Invoice.aggregate([

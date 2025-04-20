@@ -113,12 +113,12 @@ export async function GET() {
         sold: productStats[1] || 0,
         totalValue: productStats[2][0]?.totalValue || 0,
       },
-      lowStockProducts: lowStockProducts.map((p) => ({
+      lowStockProducts: lowStockProducts.map((p: any) => ({
         ...p,
         _id: p._id.toString(),
         organizationId: p.organizationId.toString(),
       })),
-      recentInvoices: recentInvoices.map((i) => ({
+      recentInvoices: recentInvoices.map((i: any) => ({
         ...i,
         _id: i._id.toString(),
         organizationId: i.organizationId.toString(),

@@ -23,13 +23,13 @@ const COMPANY_DETAILS = {
   ifscCode2: "HDFC0000299",
 }
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession()
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-    const paramsId = await params.id
+    const paramsId =  (await params).id
     // Fetch invoice with customer details
     const invoice: any = await Invoice.findOne({
       _id: new ObjectId(paramsId),

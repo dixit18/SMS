@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Inventory2, People, Receipt } from "@mui/icons-material"
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import { Box, Drawer, List, ListItem, ListItemIcon, ListItemText, Typography } from "@mui/material"
+import { Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Typography } from "@mui/material"
 
 const menuItems = [
   { text: "Dashboard", icon: <DashboardIcon />, path: "/" },
@@ -33,31 +33,35 @@ export default function Sidebar() {
         </Box>
         <List>
           {menuItems.map((item) => (
-            <ListItem
-              key={item.text}
-              component={Link}
-              href={item.path}
-              selected={pathname === item.path}
-              sx={{
-                "&.Mui-selected": {
-                  backgroundColor: "primary.main",
-                  color: "gray",
-                  "&:hover": {
-                    backgroundColor: "primary.dark",
+            <Link href={item.path} key={item.text} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <ListItemButton
+                selected={pathname === item.path}
+                sx={{
+                  "&.Mui-selected": {
+                    backgroundColor: "primary.main",
+                    color: "white",
+                    "&:hover": {
+                      backgroundColor: "primary.dark",
+                    },
+                    "& .MuiListItemIcon-root": {
+                      color: "white",
+                    },
                   },
-                  "& .MuiListItemIcon-root": {
-                    color: "gray",
-                  },
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: pathname === item.path ? "inherit" : "gray" }}>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItem>
+                }}
+              >
+                <ListItemIcon 
+                  sx={{ 
+                    color: pathname === item.path ? "white" : "text.secondary" 
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItemButton>
+            </Link>
           ))}
         </List>
       </Box>
     </Drawer>
   )
 }
-

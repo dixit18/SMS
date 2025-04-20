@@ -20,17 +20,15 @@ import {
   Autocomplete,
 } from "@mui/material"
 import { Add } from "@mui/icons-material"
-import type { Product } from "../products/actions"
-import type { Customer } from "../customers/actions"
 
 export default function QuickSale() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [customers, setCustomers] = useState<any[]>([])
+  const [products, setProducts] = useState<any[]>([])
+  const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null)
   const [saleType, setSaleType] = useState<"dimension" | "weight">("dimension")
   const [saleDetails, setSaleDetails] = useState({
     length: 0,

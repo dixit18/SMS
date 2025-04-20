@@ -3,11 +3,10 @@
 import type React from "react"
 
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Grid, Alert } from "@mui/material"
-import type { Customer } from "../types"
 import { useState } from "react"
 
 interface EditCustomerProps {
-  customer: Customer
+  customer: any
   onClose: () => void
   onUpdate: () => void
 }

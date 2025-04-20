@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb"
 import Invoice from "../../../lib/models/invoice"
 import { getSession } from "../../../lib/auth"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession()
     if (!session) {
@@ -11,7 +11,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
 
     const invoice = await Invoice.findOne({
-      _id: new ObjectId(params.id),
+      _id: new ObjectId((await params).id),
       organizationId: new ObjectId(session.organizationId),
     })
 
@@ -30,7 +30,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession()
     if (!session) {
@@ -41,7 +41,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     const result = await Invoice.updateOne(
       {
-        _id: new ObjectId(params.id),
+        _id: new ObjectId((await params).id),
         organizationId: new ObjectId(session.organizationId),
       },
       {

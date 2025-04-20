@@ -64,7 +64,7 @@ export default function CustomerSearch({ onSelect, label = "Select Customer", di
     }
   }, [open, search, debouncedFetch])
 
-  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+  const handleScroll = (event: any) => {
     const listboxNode = event.currentTarget
 
     if (!loading && hasMore && listboxNode.scrollTop + listboxNode.clientHeight >= listboxNode.scrollHeight - 50) {

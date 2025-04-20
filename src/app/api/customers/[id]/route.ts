@@ -4,7 +4,7 @@ import clientPromise from "../../../lib/mongodb"
 import { getSession } from "../../../lib/auth"
 import Customer from "../../../lib/models/customer"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession()
     if (!session) {
@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     const client = await clientPromise
 
     const customer = await Customer.findOne({
-      _id: new ObjectId(params.id),
+      _id: new ObjectId((await params).id),
       organizationId: new ObjectId(session.organizationId),
     })
 
@@ -32,7 +32,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession()
     if (!session) {
@@ -44,7 +44,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     const result = await Customer.updateOne(
       {
-        _id: new ObjectId(params.id),
+        _id: new ObjectId((await params).id),
         organizationId: new ObjectId(session.organizationId),
       },
       {
@@ -65,7 +65,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession()
     if (!session) {
@@ -75,7 +75,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     const client = await clientPromise
 
     const result = await Customer.deleteOne({
-      _id: new ObjectId(params.id),
+      _id: new ObjectId((await params).id),
       organizationId: new ObjectId(session.organizationId),
     })
 

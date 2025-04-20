@@ -4,7 +4,7 @@ import { getSession } from "../../../../lib/auth"
 import Invoice from "../../../../lib/models/invoice"
 import Customer from "../../../../lib/models/customer"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession()
     if (!session) {
@@ -13,7 +13,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     // Verify customer belongs to organization
     const customer = await Customer.findOne({
-      _id: new ObjectId(params.id),
+      _id: new ObjectId((await params).id),
       organizationId: new ObjectId(session.organizationId),
     })
 
@@ -41,7 +41,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     // Query transactions
     const query: any = {
-      customerId: new ObjectId(params.id),
+      customerId: new ObjectId((await params).id),
       organizationId: new ObjectId(session.organizationId),
       ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
     }
@@ -82,7 +82,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
 
     return NextResponse.json({
-      transactions: transactions.map((t) => ({
+      transactions: transactions.map((t : any) => ({
         ...t,
         _id: t._id.toString(),
         customerId: t.customerId.toString(),
